@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador 3D com Three.js</title>
+    <title>Visualizador 3D com Iluminação Melhorada</title>
     <style>
         * {
             margin: 0;
@@ -187,14 +187,32 @@
             });
             renderer.setSize(canvas.clientWidth, canvas.clientHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setClearColor(0x000000, 0); // Fundo totalmente transparente
             
-            // Add lights
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            // Configuração de iluminação melhorada
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Aumentei a intensidade
             scene.add(ambientLight);
             
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            // Luz direcional principal
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
             directionalLight.position.set(5, 10, 7);
+            directionalLight.castShadow = true;
             scene.add(directionalLight);
+            
+            // Luz de preenchimento para reduzir sombras escuras
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            fillLight.position.set(-5, 5, 5);
+            scene.add(fillLight);
+            
+            // Luz traseira para destacar contornos
+            const backLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            backLight.position.set(0, 0, -10);
+            scene.add(backLight);
+            
+            // Luz lateral para melhor definição
+            const sideLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            sideLight.position.set(-10, 0, 0);
+            scene.add(sideLight);
             
             // Add orbit controls
             const controls = new THREE.OrbitControls(camera, canvas);
@@ -220,6 +238,18 @@
                 function(gltf) {
                     const model = gltf.scene;
                     scene.add(model);
+                    
+                    // Ajustar o tom do material para melhor reflexão de luz
+                    model.traverse(function(child) {
+                        if (child.isMesh) {
+                            // Aumentar a reflectividade dos materiais
+                            if (child.material) {
+                                child.material.metalness = 0.3;
+                                child.material.roughness = 0.6;
+                                child.material.envMapIntensity = 1.2;
+                            }
+                        }
+                    });
                     
                     // Center the model
                     const box = new THREE.Box3().setFromObject(model);
