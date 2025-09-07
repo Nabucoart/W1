@@ -12,7 +12,7 @@
             box-sizing: border-box;
         }
         
-        body {
+        html, body {
             overflow: hidden;
             font-family: 'Segoe UI', sans-serif;
             background: transparent;
@@ -85,6 +85,41 @@
         .slot.control {
             display: none !important;
         }
+        
+        /* Estilos para o container do iframe */
+        .embed-container {
+            width: 100%;
+            height: 70vh;
+            max-height: 200px;
+            min-height: 200px;
+            overflow: hidden;
+            background: transparent;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 0;
+            font-size: 0;
+            display: block;
+        }
+        
+        .embed-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            display: block;
+            margin: 0 !important;
+            padding: 0 !important;
+            vertical-align: top;
+        }
+        
+        /* Garantir que o model-viewer tenha fundo transparente */
+        model-viewer::part(default-progress-bar) {
+            display: none;
+        }
+        
+        model-viewer::part(default-progress-mask) {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -115,14 +150,22 @@
         field-of-view="35deg"
         interpolation-decay="100"
         animation-crossfade-duration="300"
-        zoom-sensitivity="0.8">
+        zoom-sensitivity="0.8"
+        style="background-color: transparent;">
     </model-viewer>
+
+    <div class="embed-container">
+        <iframe src="https://github.com/Nabucoart/W1" allowfullscreen></iframe>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const modelViewer = document.getElementById('modelViewer');
             const loadingOverlay = document.getElementById('loadingOverlay');
             const hint = document.getElementById('hint');
+            
+            // Forçar fundo transparente
+            modelViewer.style.backgroundColor = 'transparent';
             
             // Configurações de zoom otimizadas
             modelViewer.addEventListener('load', () => {
@@ -176,6 +219,21 @@
                     event.preventDefault();
                 }
             }, { passive: false });
+            
+            // Garantir que o iframe tenha fundo transparente
+            const iframe = document.querySelector('.embed-container iframe');
+            iframe.onload = function() {
+                iframe.style.backgroundColor = 'transparent';
+                // Tentar acessar o conteúdo do iframe para definir o fundo como transparente
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (iframeDoc && iframeDoc.body) {
+                        iframeDoc.body.style.backgroundColor = 'transparent';
+                    }
+                } catch (e) {
+                    console.log('Não foi possível acessar o conteúdo do iframe devido à política de mesma origem');
+                }
+            };
         });
     </script>
 </body>
