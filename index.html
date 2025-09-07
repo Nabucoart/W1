@@ -3,38 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador 3D com Iluminação Melhorada</title>
+    <title>Visualizador 3D</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <style>
-        * {
+        body, html {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            overflow: hidden;
-            font-family: 'Segoe UI', sans-serif;
-            background: transparent;
-            height: 100vh;
-            width: 100vw;
-        }
-        
-        #canvas-container {
-            width: 100%;
-            height: 70vh;
-            background: transparent;
-            position: relative;
-        }
-        
-        #renderCanvas {
             width: 100%;
             height: 100%;
-            display: block;
-            background: transparent;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #e0e0e0;
+        }
+        
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            --poster-color: transparent;
+            background-color: #e0e0e0;
         }
         
         .hint {
-            position: absolute;
+            position: fixed;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
@@ -45,293 +35,62 @@
             font-size: 14px;
             z-index: 10;
             opacity: 1;
-            transition: opacity 1.5s ease-in-out;
+            transition: opacity 1s ease-in-out;
             pointer-events: none;
         }
         
         .hint.fade-out {
             opacity: 0;
         }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(30, 30, 30, 0.98);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            color: #cccccc;
-        }
-        
-        .loading-overlay.hidden {
-            display: none;
-        }
-        
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(204, 204, 204, 0.2);
-            border-radius: 50%;
-            border-top-color: #0066cc;
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .embed-container {
-            width: 100%;
-            height: 30vh;
-            min-height: 200px;
-            overflow: hidden;
-            background: transparent;
-            margin: 0 !important;
-            padding: 0 !important;
-            line-height: 0;
-            font-size: 0;
-            display: block;
-        }
-        
-        .embed-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: transparent;
-            display: block;
-            margin: 0 !important;
-            padding: 0 !important;
-            vertical-align: top;
-        }
-        
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-            z-index: 10;
-        }
-        
-        .control-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 18px;
-            transition: background 0.3s;
-        }
-        
-        .control-btn:hover {
-            background: rgba(0, 0, 0, 0.8);
-        }
     </style>
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-        <p>Carregando modelo 3D...</p>
-    </div>
+    <div class="hint" id="hint">✨ Toque para interagir</div>
 
-    <div id="canvas-container">
-        <canvas id="renderCanvas"></canvas>
-        <div class="hint" id="hint">Arraste para girar o modelo · Scroll para zoom</div>
-        <div class="controls">
-            <button class="control-btn" id="rotateBtn">↻</button>
-            <button class="control-btn" id="resetBtn">⟲</button>
-        </div>
-    </div>
-
-    <div class="embed-container">
-        <iframe src="https://nabucoart.github.io/inkcine/" allowfullscreen></iframe>
-    </div>
-
-    <!-- Three.js library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- GLTFLoader for loading 3D models -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
-    <!-- OrbitControls for camera control -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <model-viewer 
+        id="modelViewer"
+        src="Bobina_Inkcine_optimized.glb"
+        alt="Visualização 3D"
+        camera-controls
+        auto-rotate
+        autoplay
+        shadow-intensity="0"
+        environment-image="neutral"
+        exposure="1.0"
+        interaction-prompt="none"
+        min-camera-orbit="auto auto 0.5m"
+        max-camera-orbit="auto auto 15m"
+        field-of-view="35deg"
+        camera-orbit="0deg 75deg 4m"
+        ar-status="not-presenting">
+        
+        <!-- Loading spinner simplificado -->
+        <div slot="progress-bar" style="display: none;"></div>
+    </model-viewer>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const canvas = document.getElementById('renderCanvas');
-            const loadingOverlay = document.getElementById('loadingOverlay');
+            const modelViewer = document.getElementById('modelViewer');
             const hint = document.getElementById('hint');
-            const rotateBtn = document.getElementById('rotateBtn');
-            const resetBtn = document.getElementById('resetBtn');
             
-            // Set up Three.js scene
-            const scene = new THREE.Scene();
-            scene.background = null; // Transparent background
+            // Esconder a dica após alguns segundos
+            setTimeout(() => {
+                hint.classList.add('fade-out');
+            }, 3000);
             
-            const camera = new THREE.PerspectiveCamera(35, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-            camera.position.set(0, 0, 5);
-            
-            const renderer = new THREE.WebGLRenderer({
-                canvas: canvas,
-                antialias: true,
-                alpha: true // Enable transparency
-            });
-            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setClearColor(0x000000, 0); // Fundo totalmente transparente
-            
-            // Configuração de iluminação melhorada
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Aumentei a intensidade
-            scene.add(ambientLight);
-            
-            // Luz direcional principal
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            directionalLight.position.set(5, 10, 7);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
-            
-            // Luz de preenchimento para reduzir sombras escuras
-            const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            fillLight.position.set(-5, 5, 5);
-            scene.add(fillLight);
-            
-            // Luz traseira para destacar contornos
-            const backLight = new THREE.DirectionalLight(0xffffff, 0.6);
-            backLight.position.set(0, 0, -10);
-            scene.add(backLight);
-            
-            // Luz lateral para melhor definição
-            const sideLight = new THREE.DirectionalLight(0xffffff, 0.7);
-            sideLight.position.set(-10, 0, 0);
-            scene.add(sideLight);
-            
-            // Add orbit controls
-            const controls = new THREE.OrbitControls(camera, canvas);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.minDistance = 2;
-            controls.maxDistance = 10;
-            controls.autoRotate = false;
-            controls.autoRotateSpeed = 1;
-            
-            // Handle window resize
-            window.addEventListener('resize', () => {
-                camera.aspect = canvas.clientWidth / canvas.clientHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            // Esconder imediatamente ao interagir
+            modelViewer.addEventListener('mousedown', () => {
+                hint.classList.add('fade-out');
             });
             
-            // Load 3D model
-            const loader = new THREE.GLTFLoader();
-            
-            loader.load(
-                'BLACK_Bobina.glb',
-                function(gltf) {
-                    const model = gltf.scene;
-                    scene.add(model);
-                    
-                    // Ajustar o tom do material para melhor reflexão de luz
-                    model.traverse(function(child) {
-                        if (child.isMesh) {
-                            // Aumentar a reflectividade dos materiais
-                            if (child.material) {
-                                child.material.metalness = 0.3;
-                                child.material.roughness = 0.6;
-                                child.material.envMapIntensity = 1.2;
-                            }
-                        }
-                    });
-                    
-                    // Center the model
-                    const box = new THREE.Box3().setFromObject(model);
-                    const center = box.getCenter(new THREE.Vector3());
-                    const size = box.getSize(new THREE.Vector3());
-                    
-                    model.position.x = -center.x;
-                    model.position.y = -center.y;
-                    model.position.z = -center.z;
-                    
-                    // Adjust camera
-                    const maxDim = Math.max(size.x, size.y, size.z);
-                    camera.position.z = maxDim * 1.5;
-                    controls.update();
-                    
-                    // Hide loading overlay
-                    setTimeout(() => {
-                        loadingOverlay.classList.add('hidden');
-                        
-                        // Show hint for 3 seconds
-                        setTimeout(() => {
-                            hint.classList.add('fade-out');
-                            setTimeout(() => hint.style.display = 'none', 1500);
-                        }, 3000);
-                    }, 500);
-                },
-                function(xhr) {
-                    // Progress callback
-                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-                },
-                function(error) {
-                    // Error callback
-                    console.error('Error loading model:', error);
-                    loadingOverlay.querySelector('p').textContent = 
-                        'Erro ao carregar o modelo. Verifique se o arquivo está correto.';
-                }
-            );
-            
-            // Animation loop
-            function animate() {
-                requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
-            }
-            animate();
-            
-            // Control buttons
-            let isRotating = false;
-            
-            rotateBtn.addEventListener('click', () => {
-                isRotating = !isRotating;
-                controls.autoRotate = isRotating;
-                rotateBtn.textContent = isRotating ? '⏸' : '↻';
+            modelViewer.addEventListener('touchstart', () => {
+                hint.classList.add('fade-out');
             });
             
-            resetBtn.addEventListener('click', () => {
-                controls.reset();
-                isRotating = false;
-                controls.autoRotate = false;
-                rotateBtn.textContent = '↻';
-            });
-            
-            // Hide hint on interaction
-            let hintHidden = false;
-            const hideHint = () => {
-                if (!hintHidden) {
-                    hintHidden = true;
-                    hint.classList.add('fade-out');
-                    setTimeout(() => hint.style.display = 'none', 1500);
-                }
-            };
-            
-            canvas.addEventListener('mousedown', hideHint);
-            canvas.addEventListener('touchstart', hideHint);
-            canvas.addEventListener('wheel', hideHint);
-            
-            // Prevent page zoom on mobile
-            document.addEventListener('touchmove', function(event) {
-                if (event.touches.length > 1) {
-                    event.preventDefault();
-                }
-            }, { passive: false });
+            // Fallback para caso o carregamento demore
+            setTimeout(() => {
+                // Forçar algum comportamento se necessário
+            }, 10000);
         });
     </script>
 </body>
